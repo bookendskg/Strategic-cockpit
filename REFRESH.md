@@ -1,9 +1,22 @@
 # Daily refresh procedure — Bookends dashboard
 
 This repo serves a **static** dashboard at
-`https://vasuvekariyadome-design.github.io/bookends-dashboard/`.
+`https://riturajsinghrajput.github.io/bookends-dashboard/`.
 The page has no live data connection when opened on the web, so fresh numbers must be
-**baked into `index.html`** by a daily agent that has the Supermetrics + TickTick MCP tools.
+**baked into `index.html`**.
+
+> **There are two refresh paths. This document describes the second one.**
+>
+> 1. **Automated (normal).** `.github/workflows/refresh.yml` runs `scripts/refresh.mjs`
+>    every morning on GitHub's servers, hitting the **Meta Graph API** directly. Nothing to
+>    do by hand. Setup and troubleshooting: [SETUP-AUTOMATION.md](SETUP-AUTOMATION.md).
+> 2. **Agent-driven (manual fallback, below).** A daily agent holding the **Supermetrics +
+>    TickTick** MCP tools does the same job interactively. Use this when the workflow is
+>    broken, or when you also want the TickTick backlog count refreshed — `refresh.mjs`
+>    does not touch it.
+>
+> Both write the same `index.html`; they differ only in data source. Don't run both in the
+> same morning.
 
 The agent's job each morning: pull fresh Instagram metrics, rewrite the data inside
 `index.html`, commit, and push. GitHub Pages redeploys automatically (~1 min).
@@ -98,6 +111,9 @@ If a brand's query failed, say so in the commit message and do not touch that br
 
 ## Verify
 
-After pushing, the live page updates within ~1 minute. The header pill still reads
-"Snapshot · <date>" because that text reflects the baked date — that's expected for the
-static/hosted version. Confirm `SNAPSHOT_DATE` advanced to today.
+After pushing, the live page updates within ~1 minute. Confirm `SNAPSHOT_DATE` advanced to
+today, and that the header pill reads **"Updated · <today>"** in amber.
+
+The pill computes its own age from `SNAPSHOT_DATE`: up to 7 days it reads "Updated · <date>";
+past that it switches to **"Stale · N days old"**, turning red past 21 days. If you see a
+red pill, the refresh has stopped running — start at [SETUP-AUTOMATION.md](SETUP-AUTOMATION.md).

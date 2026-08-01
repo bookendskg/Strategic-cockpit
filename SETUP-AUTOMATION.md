@@ -32,5 +32,27 @@ GitHub repo → **Settings → Secrets and variables → Actions → New reposit
 Repo → **Actions → "Daily dashboard refresh" → Run workflow**. Watch it go green, then the
 live page updates within ~1 minute. After that it runs on its own every morning.
 
+## Troubleshooting: the dashboard pill says "Stale · N days old"
+
+That pill is computed from `SNAPSHOT_DATE` in `index.html`, so it going red means no commit
+has landed in N days — the workflow is not running, or it is running and failing. Check these
+in order; the first three all apply to a repo that was **transferred or re-created under a new
+account**, which is the most common cause.
+
+1. **The secret doesn't exist.** Secrets do **not** transfer with a repository. Re-add
+   `IG_ACCESS_TOKEN` under the new owner (above). A missing secret makes `refresh.mjs` fail
+   immediately on every run.
+2. **Actions is disabled.** Transferred and forked repos arrive with workflows switched off.
+   Repo → **Actions** tab → enable workflows if prompted.
+3. **The cron was auto-disabled.** GitHub disables scheduled workflows after **60 days with no
+   repository activity**, and emails the owner. The Actions tab shows a banner with an
+   **Enable workflow** button. A manual `Run workflow` also revives it.
+4. **The token expired.** User tokens last ~60 days. If Actions shows red runs with a Graph API
+   `OAuthException`, mint a new one — and prefer the **Page token** from step 4 above, which
+   doesn't expire. This is the likeliest cause of a pipeline that worked and then stopped.
+
+Verify the fix by running the workflow manually and confirming `SNAPSHOT_DATE` advances to
+today and the pill returns to amber "Updated · <today>".
+
 ## If a brand fails
 The script leaves that brand's data untouched and logs why — it never invents numbers.

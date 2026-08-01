@@ -3,9 +3,12 @@
 A live version of the FY27 Scaling Up cockpit. The team **views** it; a few people **update** it
 each month by feeding the Tally P&L. Hosted on the same GitHub Pages site as the brand dashboard.
 
-## Links (once deployed)
-- **View:**   https://vasuvekariyadome-design.github.io/bookends-dashboard/cockpit/
-- **Update:** https://vasuvekariyadome-design.github.io/bookends-dashboard/cockpit/update.html
+## Links
+- **View:**   https://riturajsinghrajput.github.io/bookends-dashboard/cockpit/
+- **Update:** https://riturajsinghrajput.github.io/bookends-dashboard/cockpit/update.html
+
+The cockpit is also reachable from the brand dashboard — **◈ Strategic Cockpit** in the header —
+and links back to it via **← Brand Dashboard**.
 
 Both are passcode-gated (same team passcode as the brand dashboard). `noindex` — not searchable.
 
@@ -50,8 +53,17 @@ rarely — edit `data.json` directly or ask for a tweak.
 - **View + edit gate:** the existing team passcode (same SHA-256 hash as the brand dashboard).
   The real control on *who can publish* is the GitHub token — only holders of a write-token can change
   the live numbers; everyone else can look but not publish.
+- All three pages share one unlock key in localStorage (`bookends_unlock_v1`), so entering the
+  passcode once covers the dashboard, the cockpit and the updater. The older per-page keys are still
+  accepted, so nobody gets re-prompted.
 - To change the passcode: compute the SHA-256 of the new phrase and replace the `HASH` constant near
-  the top of both `index.html` and `update.html`.
+  the top of **all three** files — `../index.html`, `index.html` and `update.html`.
+
+## Where publish writes
+`update.html` derives the target repo from the page's own URL when it is served from
+`*.github.io`, so moving this repo to another account can never again silently publish to the old
+one. Served locally it falls back to the constants in the `GH` block near the top of the script —
+update those if the repo is renamed.
 
 ## Notes
 - Currency is **₹ Lakhs** throughout `data.json` (e.g. `266.3` = ₹2.66 Cr).

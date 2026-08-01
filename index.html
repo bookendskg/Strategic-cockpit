@@ -3,7 +3,11 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="robots" content="noindex,nofollow"/>
 <title>Bookends Brand Auditor — Live Engagement Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@600;700&display=swap"/>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
 <style>
 :root{color-scheme:light;
@@ -11,6 +15,7 @@
  --navy:#00259A;--navy2:#001A6E;
  --capiche:#F50C0C;--aiko:#EDB32B;--bookends:#00259A;--ghaslet:#E8431C;
  --hit:#2E7D4E;--dud:#C2080B;--ok:#8a8a8a;--hitbg:#e7f5ec;--dudbg:#fbe9e8;--okbg:#f0efec;--blue:#7A7064;
+ --warn:#B8780A;
  --serif:Georgia,'Iowan Old Style','Times New Roman',serif;
  --shadow:0 1px 2px rgba(31,41,51,.04),0 4px 16px rgba(31,41,51,.05);}
 *{box-sizing:border-box}
@@ -33,7 +38,8 @@ h1{font-size:20px;margin:0 0 2px;letter-spacing:-.2px}
 .pill{font-size:11.5px;padding:4px 11px;border-radius:999px;background:rgba(255,255,255,.14);color:#dfeaf6;font-weight:600;letter-spacing:.2px}
 .pill.live{background:#d8f0e1;color:#0f6b38}
 .pill.snap{background:#fbeccb;color:#8a5e00}
-.btn{font-size:12.5px;padding:6px 13px;border:1px solid var(--line);background:#fff;border-radius:9px;cursor:pointer;color:var(--ink);font-weight:600;transition:all .15s}
+.pill.stale{background:#fbe9e8;color:#a3120f}
+.btn{font-size:12.5px;padding:6px 13px;border:1px solid var(--line);background:#fff;border-radius:9px;cursor:pointer;color:var(--ink);font-weight:600;transition:all .15s;text-decoration:none;display:inline-block}
 .btn:hover{background:#faf9f6}
 .tabs{display:flex;gap:7px;margin-bottom:18px;flex-wrap:wrap}
 .tab{padding:8px 15px;border-radius:10px;border:1px solid var(--line);background:#FFFCF5;cursor:pointer;font-weight:600;font-size:13px;color:var(--muted);display:flex;align-items:center;gap:7px;transition:all .15s}
@@ -117,9 +123,58 @@ td a:hover{text-decoration:underline}
 .calcell.sel{border:2px solid var(--navy);box-shadow:0 0 0 3px rgba(0,37,154,.10)}
 .cdots{display:flex;flex-wrap:wrap;gap:3px;margin-top:auto;padding-top:4px}
 .cdot{width:7px;height:7px;border-radius:50%;display:inline-block}
+/* passcode gate */
+.gate{position:fixed;inset:0;z-index:9999;background:radial-gradient(120% 140% at 0% 0%,#1A3FB0 0%,#00259A 45%,#001A6E 100%);display:flex;align-items:center;justify-content:center;padding:20px}
+.gatecard{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:32px 30px;width:100%;max-width:340px;box-shadow:0 10px 40px rgba(0,0,0,.25);text-align:center}
+.gateword{font-family:"Anton","Oswald","Arial Narrow Bold","Arial Narrow",Impact,sans-serif;font-size:34px;letter-spacing:3px;font-weight:700;color:var(--navy);line-height:1}
+.gatesub{font-size:12.5px;color:var(--muted);font-style:italic;margin:6px 0 22px}
+.gatecard input{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:10px;font-size:15px;text-align:center;letter-spacing:1px;outline:none}
+.gatecard input:focus{border-color:var(--navy)}
+.gatecard button{width:100%;margin-top:12px;padding:11px;border:none;border-radius:10px;background:var(--navy);color:#fff;font-size:14px;font-weight:700;cursor:pointer;transition:background .15s}
+.gatecard button:hover{background:var(--navy2)}
+.gateerr{font-size:12px;color:var(--dud);margin-top:12px;min-height:16px}
 </style>
 </head>
 <body>
+<div id="gate" class="gate">
+  <div class="gatecard">
+    <div class="gateword">BOOKENDS</div>
+    <div class="gatesub">brand dashboard — team access</div>
+    <input id="gatepass" type="password" placeholder="Enter passcode" autocomplete="off" autocapitalize="off"/>
+    <button id="gatebtn">Unlock</button>
+    <div id="gateerr" class="gateerr"></div>
+  </div>
+</div>
+<script>
+(function(){
+  var HASH="11bac86c2fb51522904f8f367e7a9433d82ee951a7ffb899e05a74f4ad3907c9";
+  // One key across dashboard + cockpit + update, so unlocking once covers all three.
+  // The two legacy keys are still honoured so already-unlocked browsers aren't re-prompted.
+  var KEY="bookends_unlock_v1";
+  var LEGACY=["bookends_dash_unlock_v1","bookends_cockpit_unlock_v1"];
+  var gate=document.getElementById("gate");
+  function unlock(){if(gate&&gate.parentNode)gate.parentNode.removeChild(gate);document.body.style.overflow="";}
+  function unlocked(){
+    if(localStorage.getItem(KEY)===HASH)return true;
+    for(var i=0;i<LEGACY.length;i++){if(localStorage.getItem(LEGACY[i])===HASH){localStorage.setItem(KEY,HASH);return true;}}
+    return false;
+  }
+  if(unlocked()){unlock();return;}
+  document.body.style.overflow="hidden";
+  async function sha(s){var b=new TextEncoder().encode(s);var h=await crypto.subtle.digest("SHA-256",b);return Array.from(new Uint8Array(h)).map(function(x){return x.toString(16).padStart(2,"0");}).join("");}
+  async function tryit(){
+    var err=document.getElementById("gateerr");
+    try{
+      var h=await sha(document.getElementById("gatepass").value);
+      if(h===HASH){localStorage.setItem(KEY,HASH);unlock();}
+      else{err.textContent="Wrong passcode — try again.";}
+    }catch(e){err.textContent="Open this via the live https link to unlock.";}
+  }
+  document.getElementById("gatebtn").onclick=tryit;
+  document.getElementById("gatepass").addEventListener("keydown",function(e){if(e.key==="Enter")tryit();});
+  document.getElementById("gatepass").focus();
+})();
+</script>
 <header class="hero">
   <div class="hero-in">
     <div>
@@ -129,6 +184,7 @@ td a:hover{text-decoration:underline}
     </div>
     <div class="hero-right">
       <span id="freshPill" class="pill snap">Loading…</span>
+      <a class="btn" href="./cockpit/">◈ Strategic Cockpit</a>
       <button id="refreshBtn" class="btn">↻ Refresh</button>
     </div>
   </div>
@@ -138,7 +194,8 @@ td a:hover{text-decoration:underline}
   <div class="tabs" id="tabs"></div>
   <div id="view"></div>
   <div class="foot">
-    Core post metrics refresh live from Supermetrics. Deep-dive panels (audience, trends, reels, stories, comments) are a 19 Jun 2026 snapshot — say the word to wire any of them live. Comment counts from the API are unreliable; treated as directional. Ghaslet not yet connected.
+    Core post metrics refresh daily from the Meta Graph API. Deep-dive panels (audience, trends, reels, stories, comments) are a 19 Jun 2026 snapshot — say the word to wire any of them live. Comment counts from the API are unreliable; treated as directional. Ghaslet not yet connected.
+    <div style="margin-top:8px">P&amp;L, rocks, risk register and the FY27 scoreboard live in the <a href="./cockpit/" style="color:var(--navy);font-weight:600;text-decoration:none">Strategic Cockpit →</a></div>
   </div>
 </div>
 
@@ -958,11 +1015,27 @@ async function refreshAll(){
   const now=new Date().toLocaleString("en-IN",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
   if(ok>0&&fail===0){pill.className="pill live";pill.textContent="● Live · "+now;}
   else if(ok>0){pill.className="pill live";pill.textContent="● Live ("+ok+"/"+(ok+fail)+") · "+now;}
-  else{pill.className="pill snap";pill.textContent="Snapshot · "+SNAPSHOT_DATE;}
+  else{applyFreshness();}
+}
+
+// Age of SNAPSHOT_DATE, so stale numbers stop reading as fresh ones.
+// <=7d amber "Updated", 8-21d amber "Stale", >21d red "Stale".
+function freshness(){
+  const snap=new Date(SNAPSHOT_DATE+"T00:00:00");
+  if(isNaN(snap))return{cls:"pill snap",text:"Updated · "+SNAPSHOT_DATE};
+  const today=new Date();today.setHours(0,0,0,0);
+  const days=Math.max(0,Math.round((today-snap)/86400000));
+  if(days<=7)return{cls:"pill snap",text:"Updated · "+SNAPSHOT_DATE};
+  const label="Stale · "+days+" days old";
+  return days>21?{cls:"pill stale",text:label,title:"Last refreshed "+SNAPSHOT_DATE+". The daily refresh has not run — check IG_ACCESS_TOKEN in the repo's Actions secrets."}
+                :{cls:"pill snap",text:label,title:"Last refreshed "+SNAPSHOT_DATE+"."};
+}
+function applyFreshness(){
+  const f=freshness();const pill=document.getElementById("freshPill");
+  pill.className=f.cls;pill.textContent=f.text;pill.title=f.title||"";
 }
 render();
-document.getElementById("freshPill").className="pill snap";
-document.getElementById("freshPill").textContent="Updated · "+SNAPSHOT_DATE;
+applyFreshness();
 if(window.cowork&&window.cowork.callMcpTool){
   document.getElementById("refreshBtn").onclick=refreshAll;
   refreshAll().catch(()=>{});

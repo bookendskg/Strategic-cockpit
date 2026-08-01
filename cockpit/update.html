@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <meta name="robots" content="noindex,nofollow"/>
 <title>Bookends Cockpit — Update P&L</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@600;700&display=swap"/>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <style>
@@ -87,10 +90,18 @@ code{background:#f0efec;padding:1px 5px;border-radius:5px;font-size:11.5px}
 <script>
 (function(){
   var HASH="11bac86c2fb51522904f8f367e7a9433d82ee951a7ffb899e05a74f4ad3907c9";
-  var KEY="bookends_cockpit_unlock_v1";
+  // One key across dashboard + cockpit + update, so unlocking once covers all three.
+  // The two legacy keys are still honoured so already-unlocked browsers aren't re-prompted.
+  var KEY="bookends_unlock_v1";
+  var LEGACY=["bookends_dash_unlock_v1","bookends_cockpit_unlock_v1"];
   var gate=document.getElementById("gate");
   function unlock(){if(gate&&gate.parentNode)gate.parentNode.removeChild(gate);document.body.style.overflow="";}
-  if(localStorage.getItem(KEY)===HASH){unlock();return;}
+  function unlocked(){
+    if(localStorage.getItem(KEY)===HASH)return true;
+    for(var i=0;i<LEGACY.length;i++){if(localStorage.getItem(LEGACY[i])===HASH){localStorage.setItem(KEY,HASH);return true;}}
+    return false;
+  }
+  if(unlocked()){unlock();return;}
   document.body.style.overflow="hidden";
   async function sha(s){var b=new TextEncoder().encode(s);var h=await crypto.subtle.digest("SHA-256",b);return Array.from(new Uint8Array(h)).map(function(x){return x.toString(16).padStart(2,"0");}).join("");}
   async function tryit(){var err=document.getElementById("gateerr");try{var h=await sha(document.getElementById("gatepass").value);if(h===HASH){localStorage.setItem(KEY,HASH);unlock();}else{err.textContent="Wrong passcode — try again.";}}catch(e){err.textContent="Open this via the live https link to unlock.";}}
@@ -204,7 +215,25 @@ code{background:#f0efec;padding:1px 5px;border-radius:5px;font-size:11.5px}
 </div>
 
 <script>
-const GH={owner:"vasuvekariyadome-design",repo:"bookends-dashboard",path:"cockpit/data.json",branch:"main"};
+// Publish target. Auto-derived from the URL when served from GitHub Pages, so moving the repo
+// to another account can never again silently publish to the old one. The constants are the
+// fallback for local serving (Live Server, python -m http.server). GitHub's API treats the
+// owner and repo as case-insensitive, so the lowercased hostname is fine.
+const GH=(function(){
+  const g={owner:"RITURAJSINGHRAJPUT",repo:"bookends-dashboard",path:"cockpit/data.json",branch:"main"};
+  const m=/^([^.]+)\.github\.io$/.exec(location.hostname);
+  if(m){
+    g.owner=m[1];
+    // Directory this page lives in — identical whether the URL ends in "/cockpit/" or
+    // "/cockpit/update.html", so no segment arithmetic to get wrong.
+    const seg=location.pathname.replace(/[^/]*$/,"").split("/").filter(Boolean);
+    // project site => ["<repo>","cockpit"]  ·  user site => ["cockpit"]
+    const proj=seg.length>1;
+    g.repo=proj?seg[0]:location.hostname;
+    g.path=(proj?seg.slice(1):seg).concat("data.json").join("/");
+  }
+  return g;
+})();
 const COMPUTED=["gross_profit","total_opex","ebitda"];
 const MONNAME={ "01":"Jan","02":"Feb","03":"Mar","04":"Apr","05":"May","06":"Jun","07":"Jul","08":"Aug","09":"Sep","10":"Oct","11":"Nov","12":"Dec" };
 // keyword aliases to match messy Tally line names → dashboard line keys (best-effort)

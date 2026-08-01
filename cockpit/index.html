@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <meta name="robots" content="noindex,nofollow"/>
 <title>Bookends Strategic Cockpit — FY27 · Scaling Up</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@600;700&display=swap"/>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
 <style>
 :root{color-scheme:light;
@@ -136,10 +139,18 @@ tbody tr:hover{background:#faf7f0}
 <script>
 (function(){
   var HASH="11bac86c2fb51522904f8f367e7a9433d82ee951a7ffb899e05a74f4ad3907c9";
-  var KEY="bookends_cockpit_unlock_v1";
+  // One key across dashboard + cockpit + update, so unlocking once covers all three.
+  // The two legacy keys are still honoured so already-unlocked browsers aren't re-prompted.
+  var KEY="bookends_unlock_v1";
+  var LEGACY=["bookends_dash_unlock_v1","bookends_cockpit_unlock_v1"];
   var gate=document.getElementById("gate");
   function unlock(){if(gate&&gate.parentNode)gate.parentNode.removeChild(gate);document.body.style.overflow="";}
-  if(localStorage.getItem(KEY)===HASH){unlock();return;}
+  function unlocked(){
+    if(localStorage.getItem(KEY)===HASH)return true;
+    for(var i=0;i<LEGACY.length;i++){if(localStorage.getItem(LEGACY[i])===HASH){localStorage.setItem(KEY,HASH);return true;}}
+    return false;
+  }
+  if(unlocked()){unlock();return;}
   document.body.style.overflow="hidden";
   async function sha(s){var b=new TextEncoder().encode(s);var h=await crypto.subtle.digest("SHA-256",b);return Array.from(new Uint8Array(h)).map(function(x){return x.toString(16).padStart(2,"0");}).join("");}
   async function tryit(){
@@ -165,6 +176,7 @@ tbody tr:hover{background:#faf7f0}
     <div class="hero-right">
       <div class="msel"><label>Month</label><select id="monthSel" onchange="onMonth(this.value)"></select></div>
       <span class="pill snap" id="snapPill">Loading…</span>
+      <a class="btn" href="../">← Brand Dashboard</a>
       <a class="btn" href="./update.html">✎ Update P&amp;L</a>
       <button class="btn" onclick="location.reload()">↻ Refresh</button>
       <div class="stamp" id="stamp"></div>
