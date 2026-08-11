@@ -175,6 +175,12 @@ code{background:#f0efec;padding:1px 5px;border-radius:5px;font-size:11.5px}
       <div class="sumcards" id="sumcards"></div>
       <table><thead><tr><th>Particulars</th><th>Budget</th><th>Actual</th><th>New Budget</th><th style="text-align:left">Note (shown on cockpit)</th></tr></thead>
         <tbody id="formBody"></tbody></table>
+      <div class="row" style="margin-top:12px">
+        <div class="fld" style="flex:1;min-width:260px"><label>New line item</label><input id="newRowLabel" placeholder="e.g. Marketing — Diwali Campaign" onkeydown="if(event.key==='Enter')addRow();"></div>
+        <label style="font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:5px"><input type="checkbox" id="newRowOpex" checked> counts toward Total Opex</label>
+        <button class="bigbtn ghost" onclick="addRow()">+ Add row</button>
+      </div>
+      <div id="addRowMsg"></div>
     </div>
 
     <!-- STEP 4 -->
@@ -321,6 +327,37 @@ function buildForm(){
     const note=comp?"":`<input class="note" id="note_${l.key}" placeholder="optional">`;
     return `<tr class="${cls}"><td>${l.label}</td><td>${bcell}</td><td>${acell}</td><td>${ncell}</td><td style="text-align:left">${note}</td></tr>`;
   }).join("");
+}
+function addRow(){
+  const msg=document.getElementById("addRowMsg");
+  const labelIn=document.getElementById("newRowLabel");
+  const label=labelIn.value.trim();
+  if(!label){msg.className="msg err";msg.textContent="Enter a label for the new line first.";return;}
+  const base=label.toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"")||"line";
+  const taken=k=>LINES.some(l=>l.key===k)||COMPUTED.includes(k);
+  let key=base,n=2;
+  while(taken(key)){key=base+"_"+n;n++;}
+  const opexOn=document.getElementById("newRowOpex").checked;
+  // snapshot in-progress values before buildForm() wipes #formBody, so edits aren't lost
+  const snap={};
+  LINES.forEach(l=>{
+    if(l.computed)return;
+    snap[l.key]={b:document.getElementById("b_"+l.key).value,a:document.getElementById("a_"+l.key).value,
+      n:document.getElementById("n_"+l.key).value,note:document.getElementById("note_"+l.key).value};
+  });
+  const idx=LINES.findIndex(l=>l.key==="total_opex");
+  LINES.splice(idx<0?LINES.length:idx,0,{key:key,label:label,higherGood:false,head:false,computed:false,note:""});
+  if(opexOn)OPEX.push(key);
+  buildForm();
+  LINES.forEach(l=>{
+    if(l.computed)return;
+    const s=snap[l.key];
+    if(s){setVal("b_"+l.key,s.b);setVal("a_"+l.key,s.a);setVal("n_"+l.key,s.n);setVal("note_"+l.key,s.note);}
+  });
+  recompute();
+  labelIn.value="";
+  msg.className="msg ok";
+  msg.textContent="Added \""+label+"\" "+(opexOn?"(counts toward Total Opex).":"(informational only — excluded from Total Opex).")+" Fill in its Budget/Actual above.";
 }
 function setVal(id,v){const e=document.getElementById(id);if(e)e.value=(v==null?"":v);}
 function getNum(id){const e=document.getElementById(id);if(!e||e.value.trim()==="")return null;const n=parseFloat(e.value.replace(/,/g,""));return isNaN(n)?null:n;}
